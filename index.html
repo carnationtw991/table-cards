@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- 終極修復：加入現代瀏覽器原生 Import Map 解決 react/jsx-runtime 等模組路徑解析問題 -->
+  <!-- 加入現代瀏覽器原生 Import Map 解決 react/jsx-runtime 等模組路徑解析問題 -->
   <script type="importmap">
     {
       "imports": {
@@ -22,10 +22,9 @@
 <body class="bg-sky-50">
   <div id="root"></div>
   <script type="text/babel" data-type="module">
-    // 使用標準 bare imports，由 head 的 importmap 自動對照解析
     import React, { useState, useRef, useEffect } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { Type, Users, Download, FileText, Image as ImageIcon, Palette, Upload, CheckCircle2, AlertCircle, Loader2, FileDown, ImagePlus, Heart, Star, Circle, Sparkles, Cloud, Trash2, X } from 'lucide-react';
+    import { Type, Users, Download, FileText, Image as ImageIcon, Palette, Upload, CheckCircle2, AlertCircle, Loader2, FileDown, ImagePlus, Heart, Star, Circle, Sparkles, Cloud, Trash2, X, MoveVertical } from 'lucide-react';
 
     const THEMES = {
       blue: { id: 'blue', name: '水藍', bg: 'bg-[#f0fdfa]', bgHex: '#f0fdfa', text: 'text-[#082f49]', textHex: '#082f49', border: 'border-[#38bdf8]', borderHex: '#38bdf8', accent: 'bg-[#e0f2fe]', accentHex: '#e0f2fe', iconColor: 'text-[#bae6fd]' },
@@ -36,7 +35,7 @@
 
     const FONTS = { sans: { id: 'sans', name: '預設' }, kai: { id: 'kai', name: '標楷體' }, wanghan: { id: 'wanghan', name: '注音體' } };
 
-    // --- 共用組件：桌牌模板 (修正絕對置中邏輯) ---
+    // --- 共用組件：桌牌模板 ---
     const NameTentTemplate = React.memo(({ person, config, id }) => {
       const theme = THEMES[config.theme];
       const baseNameSize = person.name ? (person.name.length <= 2 ? 105 : person.name.length === 3 ? 85 : person.name.length === 4 ? 65 : 55) : 105;
@@ -49,15 +48,26 @@
 
         return (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '794px', height: '280.75px', backgroundColor: (config.showBg && !config.bgImage) ? theme.bgHex : '#ffffff', backgroundImage: config.bgImage ? `url(${config.bgImage})` : 'none', backgroundSize: '100% 100%', backgroundPosition: 'center', transform: isRotated ? 'rotate(180deg)' : 'none', transformOrigin: 'center', boxSizing: 'border-box', overflow: 'hidden', fontFamily: 'sans-serif' }}>
-            {config.showIcon && !config.bgImage && <><div style={{ position: 'absolute', top: '95px', left: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div><div style={{ position: 'absolute', top: '95px', right: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div></>}
-            {config.showBorder && <div style={{ position: 'absolute', top: '12px', left: '12px', width: '770px', height: '256.75px', border: `4px solid ${theme.borderHex}`, borderRadius: '24px', boxSizing: 'border-box', pointerEvents: 'none', zIndex: 5 }}></div>}
-            {config.logo && <div style={{ position: 'absolute', top: '24px', left: '32px', width: '64px', height: '64px', zIndex: 10 }}><img src={config.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>}
-            {person.number && <div style={{ position: 'absolute', top: '20px', right: '32px', fontSize: '38px', fontWeight: '900', padding: '6px 24px', borderRadius: '999px', border: `4px solid ${theme.borderHex}`, backgroundColor: 'rgba(255,255,255,0.95)', color: theme.textHex, zIndex: 10, boxShadow: `0 6px 0 ${theme.borderHex}40`, fontFamily: 'system-ui, sans-serif' }}>{person.number}</div>}
             
-            {/* 絕對置中容器，移除一切位移，強制行高為 1 確保對齊精準 */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, pointerEvents: 'none' }}>
-              <div style={{ fontSize: nameSize, fontWeight: 'bold', lineHeight: '1', color: theme.textHex, fontFamily: nameFontFamily, whiteSpace: 'nowrap', textAlign: 'center' }}>{displayName}</div>
+            {/* 背景裝飾圖示 */}
+            {config.showIcon && !config.bgImage && <><div style={{ position: 'absolute', top: '95px', left: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div><div style={{ position: 'absolute', top: '95px', right: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div></>}
+            
+            {/* --- 終極防護：文字安全區 (Safe Zone) --- */}
+            {/* 設定大小比外框略小，並加上 overflow: hidden，確保文字不管放多大都絕對不會超出這個範圍去觸碰到外框 */}
+            <div style={{ position: 'absolute', top: '16px', left: '16px', width: '762px', height: '248.75px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, overflow: 'hidden', borderRadius: '20px', pointerEvents: 'none' }}>
+              <div style={{ fontSize: nameSize, fontWeight: 'bold', lineHeight: 'normal', color: theme.textHex, fontFamily: nameFontFamily, whiteSpace: 'nowrap', textAlign: 'center', transform: `translateY(${config.textOffsetY || 0}px)` }}>
+                {displayName}
+              </div>
             </div>
+
+            {/* --- 外框線層級提升 --- */}
+            {/* 將外框 zIndex 提高到 20，確保它永遠壓在文字的最上層，維持俐落的邊界感 */}
+            {config.showBorder && <div style={{ position: 'absolute', top: '12px', left: '12px', width: '770px', height: '256.75px', border: `4px solid ${theme.borderHex}`, borderRadius: '24px', boxSizing: 'border-box', pointerEvents: 'none', zIndex: 20 }}></div>}
+            
+            {/* 單位標誌與座號 (拉高層級確保不被文字遮擋) */}
+            {config.logo && <div style={{ position: 'absolute', top: '24px', left: '32px', width: '64px', height: '64px', zIndex: 25 }}><img src={config.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>}
+            {person.number && <div style={{ position: 'absolute', top: '20px', right: '32px', fontSize: '38px', fontWeight: '900', padding: '6px 24px', borderRadius: '999px', border: `4px solid ${theme.borderHex}`, backgroundColor: 'rgba(255,255,255,0.95)', color: theme.textHex, zIndex: 25, boxShadow: `0 6px 0 ${theme.borderHex}40`, fontFamily: 'system-ui, sans-serif' }}>{person.number}</div>}
+            
           </div>
         );
       };
@@ -82,7 +92,9 @@
       const [batchText, setBatchText] = useState('');
       const [batchList, setBatchList] = useState([]);
       const [activePreviewIndex, setActivePreviewIndex] = useState(0);
-      const [config, setConfig] = useState({ theme: 'blue', font: 'sans', showBorder: true, showBg: true, showIcon: true, logo: null, bgImage: null, nameScale: 100 });
+      
+      const [config, setConfig] = useState({ theme: 'blue', font: 'sans', showBorder: true, showBg: true, showIcon: true, logo: null, bgImage: null, nameScale: 100, textOffsetY: 0 });
+      
       const [isExporting, setIsExporting] = useState(false);
       const [notification, setNotification] = useState(null);
       const previewWrapperRef = useRef(null);
@@ -141,7 +153,7 @@
 
       const generateCanvas = async (elementId) => {
         const el = document.getElementById(elementId); if (!el || !window.html2canvas) return null;
-        return await window.html2canvas(el, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+        return await window.html2canvas(el, { scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff' });
       };
 
       const exportSinglePDF = async () => {
@@ -245,11 +257,22 @@
                         <button key={f.id} onClick={() => setConfig({...config, font: f.id})} className={`flex-1 py-2.5 text-[13px] rounded-xl font-black transition-all ${config.font === f.id ? 'bg-white shadow-sm text-blue-950 scale-100' : 'text-blue-400 hover:text-blue-600'}`}>{f.name}</button>
                       ))}
                     </div>
-                    <div className="flex items-center gap-4 bg-sky-50/80 p-3.5 rounded-[1rem] border-2 border-sky-100 shadow-inner">
-                      <span className="text-[12px] font-black text-blue-900 shrink-0">姓名縮放</span>
-                      <input type="range" min="50" max="200" value={config.nameScale || 100} onChange={e => setConfig({...config, nameScale: parseInt(e.target.value)})} className="flex-1 h-2 bg-sky-200 rounded-lg appearance-none cursor-pointer accent-sky-500" />
-                      <span className="text-[13px] font-black text-blue-900 min-w-[40px] text-right">{config.nameScale}%</span>
+                    
+                    {/* --- 大小縮放與垂直微調 --- */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4 bg-sky-50/80 p-3 rounded-[1rem] border-2 border-sky-100 shadow-inner">
+                        <span className="text-[12px] font-black text-blue-900 shrink-0">大小縮放</span>
+                        <input type="range" min="50" max="200" value={config.nameScale || 100} onChange={e => setConfig({...config, nameScale: parseInt(e.target.value)})} className="flex-1 h-2 bg-sky-200 rounded-lg appearance-none cursor-pointer accent-sky-500" />
+                        <span className="text-[13px] font-black text-blue-800 min-w-[40px] text-right">{config.nameScale || 100}%</span>
+                      </div>
+                      <div className="flex items-center gap-4 bg-sky-50/80 p-3 rounded-[1rem] border-2 border-sky-100 shadow-inner" title="針對特殊字體基線偏離時的修復功能">
+                        <MoveVertical className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span className="text-[12px] font-black text-blue-900 shrink-0">垂直微調</span>
+                        <input type="range" min="-100" max="100" value={config.textOffsetY || 0} onChange={e => setConfig({...config, textOffsetY: parseInt(e.target.value)})} className="flex-1 h-2 bg-sky-200 rounded-lg appearance-none cursor-pointer accent-sky-500" />
+                        <span className="text-[13px] font-black text-blue-800 min-w-[40px] text-right">{config.textOffsetY || 0}px</span>
+                      </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-sky-50/80 p-3 rounded-[1.2rem] border-2 border-sky-100 flex justify-center items-center gap-4 shadow-inner">
                         <label className="flex items-center gap-2 cursor-pointer"><div className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${config.showBorder ? 'bg-sky-400 text-white shadow-sm' : 'bg-sky-200'}`}>{config.showBorder && <CheckCircle2 className="w-3.5 h-3.5" />}</div><input type="checkbox" checked={config.showBorder} onChange={e => setConfig({...config, showBorder: e.target.checked})} className="hidden" /><span className="text-[13px] font-black text-blue-900">邊框</span></label>
@@ -263,7 +286,7 @@
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white border-2 border-sky-100 p-3 rounded-[1.2rem] shadow-sm hover:shadow-md transition-all"><div className="flex items-center gap-1.5"><input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} className="hidden" id="logo-upload" /><label htmlFor="logo-upload" className="flex-1 flex justify-center items-center gap-2 px-2 py-2 bg-sky-50 border-2 border-sky-200 rounded-xl cursor-pointer hover:bg-sky-100 transition-all text-[13px] font-bold text-blue-700"><ImageIcon className="w-4 h-4" /> {config.logo ? '已上傳' : '標誌'}</label>{config.logo && <button onClick={() => setConfig(p => ({ ...p, logo: null }))} className="p-1.5 text-rose-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>}</div></div>
-                      <div className="bg-white border-2 border-sky-100 p-3 rounded-[1.2rem] shadow-sm hover:shadow-md transition-all"><div className="flex items-center gap-1.5"><input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bgImage', 5)} className="hidden" id="bg-upload" /><label htmlFor="bg-upload" className="flex-1 flex justify-center items-center gap-2 px-2 py-2 bg-sky-50 border-2 border-sky-200 rounded-xl cursor-pointer hover:bg-sky-100 transition-all text-[13px] font-bold text-blue-700"><ImagePlus className="w-4 h-4" /> {config.bgImage ? '已上傳' : '背景'}</label>{config.bgImage && <button onClick={() => setConfig(p => ({ ...p, bgImage: null }))} className="p-1.5 text-rose-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>}</div></div>
+                      <div className="bg-white border-2 border-sky-100 p-3 rounded-[1.2rem] shadow-sm hover:shadow-md transition-all"><div className="flex items-center gap-1.5"><input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bgImage')} className="hidden" id="bg-upload" /><label htmlFor="bg-upload" className="flex-1 flex justify-center items-center gap-2 px-2 py-2 bg-sky-50 border-2 border-sky-200 rounded-xl cursor-pointer hover:bg-sky-100 transition-all text-[13px] font-bold text-blue-700"><ImagePlus className="w-4 h-4" /> {config.bgImage ? '已上傳' : '背景'}</label>{config.bgImage && <button onClick={() => setConfig(p => ({ ...p, bgImage: null }))} className="p-1.5 text-rose-400 hover:text-rose-600 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>}</div></div>
                     </div>
                   </div>
                 </section>
@@ -287,8 +310,10 @@
             </div>
           </div>
 
+          {/* 分隔拖拉條 */}
           <div onMouseDown={startDrag} className="w-1.5 bg-sky-100 hover:bg-sky-300 cursor-col-resize z-30 flex flex-col items-center justify-center transition-colors shadow-inner shrink-0 group relative border-l border-sky-200"><div className="absolute inset-y-0 left-0 right-[-12px] z-40"></div><div className="h-16 w-1 bg-white rounded-full shadow-sm flex flex-col items-center justify-center gap-1 py-1"><div className="w-0.5 h-1 bg-sky-300 rounded-full"></div><div className="w-0.5 h-1 bg-sky-300 rounded-full"></div></div></div>
 
+          {/* 右側預覽區 */}
           <div style={{ width: `${100 - leftWidth}%` }} className="relative flex flex-col overflow-hidden bg-sky-50/60 bg-[radial-gradient(#bae6fd_2px,transparent_2px)] [background-size:24px_24px] shrink-0">
             <div className="absolute top-10 w-full px-6 flex justify-between items-center z-50 pointer-events-none">
               <div className="bg-white/90 backdrop-blur-xl px-5 py-2 rounded-full shadow-sm text-[12px] font-black text-blue-900 pointer-events-auto border-2 border-white flex items-center gap-3">
