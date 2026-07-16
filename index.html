@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>立體三角桌牌產生器 | 鄭念慈老師設計</title>
+  
+  <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 Babel 以便在瀏覽器中編譯 JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <!-- 加入現代瀏覽器原生 Import Map 解決 react/jsx-runtime 等模組路徑解析問題 -->
@@ -18,9 +21,28 @@
       }
     }
   </script>
+  
+  <style>
+    @font-face { 
+      font-family: 'HanWangKaiMediumChuIn'; 
+      src: local('王漢宗中楷體注音'); 
+    }
+    .font-wanghan { font-family: '王漢宗中楷體注音', serif !important; } 
+    .font-kai { font-family: '標楷體', serif !important; }
+    
+    @keyframes fade-in-up { 
+      0% { opacity: 0; transform: translateY(15px); scale: 0.95; } 
+      100% { opacity: 1; transform: translateY(0); scale: 1; } 
+    }
+    .animate-fade-in-up { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; } 
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 20px; }
+  </style>
 </head>
 <body class="bg-sky-50">
   <div id="root"></div>
+  
   <script type="text/babel" data-type="module">
     import React, { useState, useRef, useEffect } from 'react';
     import { createRoot } from 'react-dom/client';
@@ -33,7 +55,11 @@
       bw: { id: 'bw', name: '黑白', bg: 'bg-[#ffffff]', bgHex: '#ffffff', text: 'text-[#000000]', textHex: '#000000', border: 'border-[#1f2937]', borderHex: '#1f2937', accent: 'bg-[#f3f4f6]', accentHex: '#f3f4f6', iconColor: 'text-[#e5e7eb]' },
     };
 
-    const FONTS = { sans: { id: 'sans', name: '預設' }, kai: { id: 'kai', name: '標楷體' }, wanghan: { id: 'wanghan', name: '注音體' } };
+    const FONTS = { 
+      sans: { id: 'sans', name: '預設' }, 
+      kai: { id: 'kai', name: '標楷體' }, 
+      wanghan: { id: 'wanghan', name: '注音體' } 
+    };
 
     // --- 共用組件：桌牌模板 ---
     const NameTentTemplate = React.memo(({ person, config, id }) => {
@@ -53,18 +79,16 @@
             {config.showIcon && !config.bgImage && <><div style={{ position: 'absolute', top: '95px', left: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div><div style={{ position: 'absolute', top: '95px', right: '80px', opacity: 0.35, zIndex: 1 }} className={theme.iconColor}><IconSvg /></div></>}
             
             {/* --- 終極防護：文字安全區 (Safe Zone) --- */}
-            {/* 設定大小比外框略小，並加上 overflow: hidden，確保文字不管放多大都絕對不會超出這個範圍去觸碰到外框 */}
             <div style={{ position: 'absolute', top: '16px', left: '16px', width: '762px', height: '248.75px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, overflow: 'hidden', borderRadius: '20px', pointerEvents: 'none' }}>
               <div style={{ fontSize: nameSize, fontWeight: 'bold', lineHeight: 'normal', color: theme.textHex, fontFamily: nameFontFamily, whiteSpace: 'nowrap', textAlign: 'center', transform: `translateY(${config.textOffsetY || 0}px)` }}>
                 {displayName}
               </div>
             </div>
 
-            {/* --- 外框線層級提升 --- */}
-            {/* 將外框 zIndex 提高到 20，確保它永遠壓在文字的最上層，維持俐落的邊界感 */}
+            {/* --- 外框線 --- */}
             {config.showBorder && <div style={{ position: 'absolute', top: '12px', left: '12px', width: '770px', height: '256.75px', border: `4px solid ${theme.borderHex}`, borderRadius: '24px', boxSizing: 'border-box', pointerEvents: 'none', zIndex: 20 }}></div>}
             
-            {/* 單位標誌與座號 (拉高層級確保不被文字遮擋) */}
+            {/* 單位標誌與座號 */}
             {config.logo && <div style={{ position: 'absolute', top: '24px', left: '32px', width: '64px', height: '64px', zIndex: 25 }}><img src={config.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>}
             {person.number && <div style={{ position: 'absolute', top: '20px', right: '32px', fontSize: '38px', fontWeight: '900', padding: '6px 24px', borderRadius: '999px', border: `4px solid ${theme.borderHex}`, backgroundColor: 'rgba(255,255,255,0.95)', color: theme.textHex, zIndex: 25, boxShadow: `0 6px 0 ${theme.borderHex}40`, fontFamily: 'system-ui, sans-serif' }}>{person.number}</div>}
             
@@ -97,6 +121,7 @@
       
       const [isExporting, setIsExporting] = useState(false);
       const [notification, setNotification] = useState(null);
+      const [showFontTip, setShowFontTip] = useState(false);
       const previewWrapperRef = useRef(null);
       const isDragging = useRef(false);
       const [leftWidth, setLeftWidth] = useState(70); 
@@ -205,13 +230,6 @@
 
       return (
         <div className="flex h-screen bg-sky-50/80 font-sans overflow-hidden text-blue-950">
-          <style dangerouslySetInnerHTML={{__html: `
-            @font-face { font-family: 'HanWangKaiMediumChuIn'; src: local('王漢宗中楷體注音'); }
-            .font-wanghan { font-family: '王漢宗中楷體注音', serif !important; } .font-kai { font-family: '標楷體', serif !important; }
-            @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(15px); scale: 0.95; } 100% { opacity: 1; transform: translateY(0); scale: 1; } }
-            .animate-fade-in-up { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-            .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 20px; }
-          `}} />
 
           {/* 左側控制面板 */}
           <div style={{ width: `${leftWidth}%` }} className="overflow-hidden bg-white/90 backdrop-blur-xl flex flex-col shadow-xl z-20 shrink-0 relative border-r border-sky-100">
@@ -252,10 +270,31 @@
                 <section className="space-y-4">
                   <h2 className="text-sm font-extrabold text-blue-800 uppercase flex items-center gap-2 mb-2"><Palette className="w-5 h-5" /> 佈景與裝飾</h2>
                   <div className="space-y-4">
-                    <div className="flex gap-2 bg-sky-50 p-2 rounded-[1rem] border-2 border-sky-100 shadow-inner">
-                      {Object.values(FONTS).map(f => (
-                        <button key={f.id} onClick={() => setConfig({...config, font: f.id})} className={`flex-1 py-2.5 text-[13px] rounded-xl font-black transition-all ${config.font === f.id ? 'bg-white shadow-sm text-blue-950 scale-100' : 'text-blue-400 hover:text-blue-600'}`}>{f.name}</button>
-                      ))}
+                    
+                    {/* 字型選擇區 (包含提示按鈕修復) */}
+                    <div className="flex flex-col gap-2 relative" onMouseLeave={() => setShowFontTip(false)}>
+                      <div className="flex gap-2 bg-sky-50 p-2 rounded-[1rem] border-2 border-sky-100 shadow-inner">
+                        {Object.values(FONTS).map(f => (
+                          <button key={f.id} onClick={() => setConfig({...config, font: f.id})} className={`flex-1 py-2.5 text-[13px] rounded-xl font-black transition-all flex justify-center items-center gap-1 ${config.font === f.id ? 'bg-white shadow-sm text-blue-950 scale-100' : 'text-blue-400 hover:text-blue-600'}`}>
+                            {f.name}
+                            {f.id === 'wanghan' && config.font === 'wanghan' && (
+                                <AlertCircle className="w-4 h-4 text-sky-500 cursor-help" onMouseEnter={() => setShowFontTip(true)} onClick={() => setShowFontTip(!showFontTip)} />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* 字型提示框 */}
+                      {showFontTip && config.font === 'wanghan' && (
+                        <div className="absolute top-[110%] right-0 z-50 bg-white border-2 border-sky-200 rounded-xl shadow-xl p-3 w-[280px] animate-fade-in-up flex flex-col gap-2">
+                           <div className="text-[12px] font-bold text-blue-900 leading-relaxed text-left">
+                               💡 提醒：如果您沒有看到注音，請先在電腦安裝<strong className="text-sky-600">「王漢宗中楷體注音」</strong>。
+                           </div>
+                           <a href="https://drive.google.com/drive/folders/1fORvsRTwzYjCau1D1kg_iZPo0I2EbC7k?usp=sharing" target="_blank" rel="noopener noreferrer" className="bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 font-black text-[12px] py-1.5 px-3 rounded-lg text-center transition-colors flex items-center justify-center gap-1 pointer-events-auto">
+                               <Download className="w-3.5 h-3.5" /> 點此下載字型
+                           </a>
+                        </div>
+                      )}
                     </div>
                     
                     {/* --- 大小縮放與垂直微調 --- */}
@@ -293,6 +332,7 @@
               </div>
             </div>
 
+            {}
             <div className="p-6 border-t-2 border-sky-100 bg-white/95 backdrop-blur-xl shrink-0 relative z-50">
               <div className="max-w-4xl mx-auto flex gap-4">
                 {mode === 'single' ? (
@@ -313,6 +353,7 @@
           {/* 分隔拖拉條 */}
           <div onMouseDown={startDrag} className="w-1.5 bg-sky-100 hover:bg-sky-300 cursor-col-resize z-30 flex flex-col items-center justify-center transition-colors shadow-inner shrink-0 group relative border-l border-sky-200"><div className="absolute inset-y-0 left-0 right-[-12px] z-40"></div><div className="h-16 w-1 bg-white rounded-full shadow-sm flex flex-col items-center justify-center gap-1 py-1"><div className="w-0.5 h-1 bg-sky-300 rounded-full"></div><div className="w-0.5 h-1 bg-sky-300 rounded-full"></div></div></div>
 
+          {}
           {/* 右側預覽區 */}
           <div style={{ width: `${100 - leftWidth}%` }} className="relative flex flex-col overflow-hidden bg-sky-50/60 bg-[radial-gradient(#bae6fd_2px,transparent_2px)] [background-size:24px_24px] shrink-0">
             <div className="absolute top-10 w-full px-6 flex justify-between items-center z-50 pointer-events-none">
@@ -341,6 +382,7 @@
             </div>
           </div>
 
+          {/* 隱藏的匯出繪製區 */}
           <div style={{ position: 'fixed', top: '-20000px', left: '-20000px', width: '794px', height: '1123px', zIndex: -50, pointerEvents: 'none' }}>
             <div id="export-container">
               <NameTentTemplate id="export-single" person={singleData} config={config} />
@@ -348,6 +390,7 @@
             </div>
           </div>
 
+          {}
           {notification && (
             <div className="fixed bottom-10 right-10 z-50 animate-fade-in-up">
               <div className={`px-7 py-4 rounded-[1.5rem] shadow-xl flex items-center gap-3 text-white font-black border-2 ${notification.type === 'error' ? 'bg-rose-500 border-rose-400' : 'bg-blue-600 border-blue-400'}`}><span className="text-[15px]">{notification.msg}</span></div>
